@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Crazy Ball Rush</string>
+    <string name="facebook_app_id">1073665188756264</string>
+    <string name="fb_login_protocol_scheme">fb1073665188756264</string>
+    <string name="facebook_client_token">fb7ba27778218519b81d2dd9af25b354</string>
+    <!-- Google Mobile Ads Official Sample IDs for test / development -->
+    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_interstitial_id">ca-app-pub-3940256099942544/1033173712</string>
+    <string name="admob_rewarded_id">ca-app-pub-3940256099942544/5224354917</string>
+</resources>

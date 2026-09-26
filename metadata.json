@@ -1,0 +1,6 @@
+{
+  "name": "Crazy Ball Rush",
+  "description": "A sleek, mobile-first infinite 2D arcade runner featuring a glowing energy orb, procedural hazards, dynamic parallax environments, and responsive arcade controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

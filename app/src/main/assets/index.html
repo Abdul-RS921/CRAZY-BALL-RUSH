@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Crazy Ball Rush</title>
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" href="favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- In-Game HUD -->
+      <div id="ui-layer" style="display: none">
+        <div class="hud-top">
+          <div class="hud-left">
+            <!-- Compact Score Card -->
+            <div class="hud-card hud-score-card">
+              <span class="hud-card-label">SCORE</span>
+              <span class="hud-val score-val" id="hud-score">0</span>
+            </div>
+
+            <!-- Compact Rush Energy Card -->
+            <div
+              id="hud-escape-energy"
+              class="hud-card hud-energy-card"
+              title="Rush Energy"
+            >
+              <div class="hud-card-row">
+                <span class="hud-card-label" id="hud-escape-energy-label"
+                  >⚡ RUSH ENERGY</span
+                >
+                <span id="hud-escape-energy-pct" class="hud-card-subval"
+                  >0%</span
+                >
+              </div>
+              <div class="hud-energy-track">
+                <div id="hud-escape-energy-fill" class="hud-energy-fill"></div>
+              </div>
+            </div>
+
+            <!-- Compact Level & Distance Card -->
+            <div class="hud-card hud-level-card">
+              <span class="hud-icon hud-flag-icon">🏁</span>
+              <div class="hud-level-row" id="hud-level-dist-wrap">
+                <span class="hud-level-badge" id="hud-level-tag">L1</span>
+                <span class="hud-level-dot">•</span>
+                <span class="hud-dist-val" id="hud-dist-val">0m</span>
+              </div>
+              <span
+                class="hud-val level-val"
+                id="hud-level-dist"
+                style="display: none"
+                >L1 • 0m</span
+              >
+            </div>
+          </div>
+
+          <div class="hud-right">
+            <div class="hud-right-row">
+              <div class="hud-card hud-coins-card" title="Energy Coins">
+                <span class="hud-icon hud-coin-icon">⚡</span>
+                <span class="hud-val coin-val" id="hud-coins">0</span>
+              </div>
+              <div
+                id="hud-session-pill"
+                class="hud-card hud-session-card"
+                title="Session Play Time"
+              >
+                <span class="hud-icon">⏱</span>
+                <span id="hud-session-timer" class="hud-val">00:00</span>
+              </div>
+              <button
+                id="btn-pause-hud"
+                class="btn-pause"
+                aria-label="Pause Game"
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <rect x="6" y="4" width="4" height="16" rx="2"></rect>
+                  <rect x="14" y="4" width="4" height="16" rx="2"></rect>
+                </svg>
+              </button>
+            </div>
+            <div id="hud-combo" class="hud-combo-badge" style="display: none">
+              x2 COMBO
+            </div>
+            <div id="hud-powerup" class="hud-powerup-bar" style="display: none">
+              <span id="hud-powerup-icon" style="font-size: 13px">🛡</span>
+              <div class="powerup-meter-bg">
+                <div id="powerup-meter-fill" class="powerup-meter-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level Milestone Notification Banner (fallback reference) -->
+        <div
+          id="hud-level-milestone"
+          class="hud-level-milestone"
+          style="display: none"
+        >
+          <div class="level-milestone-pill">
+            <span class="level-milestone-badge" id="milestone-badge"
+              >LEVEL 2</span
+            >
+            <span class="level-milestone-text" id="milestone-text"
+              >500m REACHED</span
+            >
+          </div>
+        </div>
+
+        <!-- Escape Event Alert Banner (Non-blocking, pointer-events: none) -->
+        <div
+          id="hud-event-alert"
+          class="hud-event-alert"
+          style="display: none"
+          aria-live="assertive"
+        >
+          <div class="event-alert-pill">
+            <span class="event-alert-icon">⚠</span>
+            <div class="event-alert-content">
+              <div class="event-alert-sub" id="event-alert-sub">
+                RUSH EVENT INCOMING
+              </div>
+              <div class="event-alert-title" id="event-alert-title">
+                ENERGY SURGE
+              </div>
+            </div>
+            <span class="event-alert-icon">⚠</span>
+          </div>
+        </div>
+
+        <!-- Seamless Level Transition Celebration Banner (Non-blocking, pointer-events: none) -->
+        <div
+          id="level-transition-banner"
+          class="level-transition-banner"
+          style="display: none"
+          aria-live="polite"
+        >
+          <div class="level-transition-pill">
+            <div class="level-transition-burst-left">✨</div>
+            <div class="level-transition-center">
+              <div class="level-transition-sub">🎉 CONGRATULATIONS! 🎉</div>
+              <div class="level-transition-title" id="transition-level-title">
+                LEVEL 2 REACHED
+              </div>
+              <div class="level-transition-meta">
+                <span class="level-transition-reward" id="transition-bonus-text"
+                  >+75 BONUS COINS</span
+                >
+                <span class="level-transition-dot">•</span>
+                <span class="level-transition-env" id="transition-env-name"
+                  >SUNSET RUNWAY</span
+                >
+              </div>
+            </div>
+            <div class="level-transition-burst-right">✨</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Centralized Non-Blocking Notification Banner Overlay -->
+      <div
+        id="unified-notification-banner"
+        class="unified-notification-banner"
+        style="display: none"
+        aria-live="polite"
+      ></div>
+
+      <!-- Toast Container for Notifications -->
+      <div id="toast-container"></div>
+
+      <!-- Achievement Banner Overlay -->
+      <div id="achievement-banner">
+        <div class="banner-trophy-box" id="ach-banner-icon">🏆</div>
+        <div class="banner-content">
+          <div class="banner-tag">ACHIEVEMENT UNLOCKED</div>
+          <div class="banner-name" id="ach-banner-name">FIRST RUN</div>
+          <div class="banner-desc" id="ach-banner-desc">
+            Completed your first trial
+          </div>
+          <div class="banner-reward" id="ach-banner-reward">
+            <span>🎁</span> <span>Reward: +100 Coins</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playable First-Run Tutorial HUD Overlay -->
+      <div id="tutorial-hud-overlay">
+        <!-- Top header: progress badge & skip button -->
+        <div class="tutorial-top-bar">
+          <div class="tutorial-badge">
+            <span class="tut-badge-dot">●</span>
+            <span id="tutorial-step-tag">TUTORIAL 1/6</span>
+          </div>
+          <button
+            id="btn-skip-tutorial-run"
+            class="btn-tutorial-skip"
+            type="button"
+          >
+            EXIT DEMO MODE ✕
+          </button>
+        </div>
+
+        <!-- Upper Safe Area Banner: outside of gameplay area -->
+        <div id="tutorial-callout" class="tutorial-compact-banner">
+          <div id="tutorial-step-title" class="tutorial-title-text">
+            TAP TO JUMP
+          </div>
+          <div id="tutorial-step-desc" class="tutorial-sub-text">
+            Tap anywhere to leap into the air
+          </div>
+        </div>
+
+        <!-- Center clear gameplay area (empty flex spacer so player & obstacles are 100% visible) -->
+        <div class="tutorial-clear-zone"></div>
+
+        <!-- Bottom safe area: animated hand guide, well below player level -->
+        <div id="tutorial-bottom-bar" class="tutorial-bottom-container">
+          <div id="tutorial-hand-guide" class="tutorial-hand-guide">
+            <div class="tut-hand-icon">👆</div>
+            <div id="tutorial-hand-text" class="tut-hand-label">
+              TAP TO JUMP
+            </div>
+          </div>
+        </div>
+
+        <!-- Tutorial Completed Card -->
+        <div
+          id="tutorial-completion-card"
+          class="tutorial-completion-card"
+          style="display: none"
+        >
+          <div class="tutorial-complete-icon">🎉</div>
+          <h2
+            class="tutorial-title-text"
+            style="color: var(--emerald); font-size: 1.3rem"
+          >
+            TUTORIAL COMPLETE!
+          </h2>
+          <p class="tutorial-desc-text" style="margin-bottom: 16px">
+            You've mastered jumping, dodging hazards, and collecting coins!
+          </p>
+          <button id="btn-tutorial-finish" class="btn-primary" type="button">
+            START PLAYING ⚡
+          </button>
+        </div>
+      </div>
+
+      <!-- Revival Countdown Overlay -->
+      <div id="revive-overlay" class="revive-overlay">
+        <div class="revive-box">
+          <div class="revive-title">RESUMING RUN</div>
+          <div id="revive-number" class="revive-number">3</div>
+          <div class="revive-subtitle">SHIELD CHARGE ACTIVE</div>
+        </div>
+      </div>
+
+      <!-- First-Time Experience: Welcome Screen -->
+      <div id="welcome-screen" class="screen-overlay">
+        <div class="modal-card">
+          <div
+            class="welcome-logo-container"
+            style="display: flex; justify-content: center; margin-bottom: 14px"
+          >
+            <img
+              src="app_logo.jpg"
+              alt="Crazy Ball Rush Logo"
+              class="welcome-logo-img"
+              style="
+                width: 76px;
+                height: 76px;
+                border-radius: 20px;
+                border: 2px solid rgba(0, 243, 255, 0.45);
+                box-shadow: 0 0 25px rgba(0, 243, 255, 0.35);
+                object-fit: cover;
+              "
+            />
+          </div>
+          <h1 class="game-title" style="font-size: 2rem">
+            WELCOME TO CRAZY BALL RUSH
+          </h1>
+          <p class="welcome-lead">What should we call you?</p>
+
+          <div class="input-group">
+            <input
+              type="text"
+              id="input-player-name"
+              class="game-input"
+              maxlength="14"
+              placeholder="Enter your name"
+              autocomplete="nickname"
+              autocapitalize="words"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="done"
+            />
+            <div
+              id="name-input-error"
+              class="input-error-msg"
+              style="display: none"
+            >
+              Please enter your name
+            </div>
+          </div>
+
+          <button id="btn-welcome-continue" class="btn-primary" type="button">
+            <span>CONTINUE</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M5 13h11.86l-5.43 5.43 1.42 1.42L21.14 12l-8.29-8.29-1.42 1.42L16.86 11H5v2z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- First-Time Experience: Guide Question Prompt -->
+      <div id="guide-prompt-screen" class="screen-overlay">
+        <div class="modal-card">
+          <div class="orb-preview-wrapper" style="margin-bottom: 12px">
+            <div class="orb-ring-orbit" id="prompt-orb-ring"></div>
+            <div class="orb-preview-core" id="prompt-orb-preview"></div>
+          </div>
+
+          <h2 class="section-title" style="margin-bottom: 8px">
+            READY TO RUN?
+          </h2>
+          <p
+            style="
+              color: var(--text-dim);
+              font-size: 1.05rem;
+              text-align: center;
+              margin-bottom: 24px;
+              line-height: 1.4;
+            "
+          >
+            Jump straight into a hands-on Training Run or read the quick guide!
+          </p>
+
+          <button
+            id="btn-prompt-tutorial"
+            class="btn-primary"
+            type="button"
+            style="margin-bottom: 10px"
+          >
+            ⚡ PLAY TRAINING RUN
+          </button>
+          <button
+            id="btn-prompt-guide"
+            class="btn-secondary"
+            type="button"
+            style="margin-bottom: 10px"
+          >
+            📖 SHOW GUIDE
+          </button>
+          <button id="btn-prompt-skip" class="btn-secondary" type="button">
+            SKIP TO MENU
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Quick Guide Modal -->
+      <div id="guide-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <h2 class="section-title"><span>📖</span> HOW TO PLAY</h2>
+          <div class="guide-cards-container">
+            <div class="guide-card">
+              <div class="guide-icon">🕹️</div>
+              <div class="guide-info">
+                <div class="guide-heading">TAP ANYWHERE TO JUMP</div>
+                <div class="guide-desc">
+                  Tap or click anywhere to jump over hazards. Tap again in
+                  mid-air to double jump! On desktop use
+                  <span class="key-badge">SPACE</span>.
+                </div>
+              </div>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">⚠️</div>
+              <div class="guide-info">
+                <div class="guide-heading">AVOID HAZARDS</div>
+                <div class="guide-desc">
+                  Leap across gaps, spikes, barrier pillars, and floating hazard
+                  mines. One touch drains your energy.
+                </div>
+              </div>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">⚡</div>
+              <div class="guide-info">
+                <div class="guide-heading">COLLECT ENERGY COINS</div>
+                <div class="guide-desc">
+                  Gather glowing energy coins to build your total wealth and
+                  unlock stunning customized orb skins!
+                </div>
+              </div>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">🛡️</div>
+              <div class="guide-info">
+                <div class="guide-heading">MASTER POWER-UPS</div>
+                <div class="guide-desc">
+                  <strong>Shield:</strong> Absorbs 1 collision.<br />
+                  <strong>Magnet:</strong> Vacuum nearby coins.<br />
+                  <strong>Speed Boost:</strong> Ultra high-speed streak!
+                </div>
+              </div>
+            </div>
+            <div class="guide-card">
+              <div class="guide-icon">🔥</div>
+              <div class="guide-info">
+                <div class="guide-heading">SURVIVE & COMBO</div>
+                <div class="guide-desc">
+                  Surviving longer accelerates speed and multiplies score. Chain
+                  coin pickups to trigger massive combo multipliers!
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            id="btn-close-guide"
+            class="btn-primary"
+            style="margin-top: 14px"
+          >
+            LET'S RUN!
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Menu Screen -->
+      <div id="menu-screen" class="screen-overlay">
+        <div class="modal-card">
+          <div
+            style="display: flex; justify-content: center; margin-bottom: 12px"
+          >
+            <img
+              src="app_logo.jpg"
+              alt="Crazy Ball Rush Logo"
+              style="
+                width: 72px;
+                height: 72px;
+                border-radius: 18px;
+                border: 2px solid rgba(0, 243, 255, 0.45);
+                box-shadow: 0 0 22px rgba(0, 243, 255, 0.35);
+                object-fit: cover;
+              "
+            />
+          </div>
+          <h1 class="game-title">CRAZY BALL RUSH</h1>
+          <p class="game-tagline">Infinite Arcade Odyssey</p>
+
+          <div class="player-greeting">
+            <span class="greeting-prefix">RUNNER</span>
+            <span class="greeting-name" id="menu-player-name">PLAYER</span>
+          </div>
+
+          <div
+            class="orb-preview-wrapper"
+            id="menu-orb-display"
+            title="Tap to customize orb"
+          >
+            <div class="orb-ring-orbit" id="menu-orb-ring"></div>
+            <div class="orb-preview-core" id="menu-orb-core"></div>
+          </div>
+
+          <div style="margin-bottom: 12px; text-align: center">
+            <span
+              style="
+                font-size: 0.85rem;
+                color: var(--text-dim);
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+              "
+              >BEST SCORE</span
+            >
+            <div
+              style="
+                font-family: &quot;Orbitron&quot;, monospace;
+                font-size: 1.8rem;
+                font-weight: 800;
+                color: #fff;
+                text-shadow: 0 0 12px var(--cyan-glow);
+              "
+            >
+              <span id="menu-best-score">0</span>
+            </div>
+          </div>
+
+          <button id="btn-play" class="btn-primary">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            PLAY
+          </button>
+
+          <div class="menu-action-grid">
+            <button id="btn-orb-customization" class="btn-secondary">
+              <span>🎨</span> CUSTOMIZE
+            </button>
+            <button id="btn-session-reward-menu" class="btn-secondary">
+              <span>🎁</span> REWARD
+              <span
+                id="session-reward-badge"
+                class="badge-dot"
+                style="display: none"
+              ></span>
+            </button>
+          </div>
+
+          <div class="menu-action-grid">
+            <button id="btn-daily-missions-menu" class="btn-secondary">
+              <span>📋</span> MISSIONS
+              <span
+                id="daily-missions-badge"
+                class="badge-dot"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="btn-leaderboard-menu" class="btn-secondary">
+              <span>🏆</span> RANKINGS
+            </button>
+          </div>
+
+          <div class="menu-action-grid">
+            <button id="btn-daily-reward-menu" class="btn-secondary">
+              <span>⭐</span> DAILY REWARD
+              <span
+                id="daily-login-badge"
+                class="badge-dot"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="btn-tutorial-menu" class="btn-secondary">
+              <span>⚡</span> TRAINING
+            </button>
+          </div>
+
+          <div class="menu-action-grid">
+            <button id="btn-achievements" class="btn-secondary">
+              <span>★</span> ACHIEVEMENTS
+            </button>
+            <button
+              id="btn-stats"
+              class="btn-secondary"
+              data-action="profile"
+              title="Open Runner Profile"
+            >
+              <span>📊</span> PROFILE
+            </button>
+          </div>
+
+          <button id="btn-settings" class="btn-secondary">
+            <span>⚙</span> SETTINGS
+          </button>
+
+          <div class="key-hint">
+            Tap or Click to Jump • <span class="key-badge">SPACE</span> Jump •
+            <span class="key-badge">P</span> Pause
+          </div>
+        </div>
+      </div>
+
+      <!-- Pause Screen -->
+      <div id="pause-screen" class="screen-overlay">
+        <div class="modal-card">
+          <h2 class="section-title">GAME PAUSED</h2>
+          <div
+            style="
+              font-size: 0.95rem;
+              color: var(--text-dim);
+              margin-bottom: 24px;
+              text-align: center;
+            "
+          >
+            Take a breather, Runner.
+          </div>
+
+          <button id="btn-resume" class="btn-primary">RESUME</button>
+          <button id="btn-restart-pause" class="btn-secondary">
+            RESTART RUN
+          </button>
+          <button id="btn-settings-pause" class="btn-secondary">
+            ⚙ SETTINGS
+          </button>
+          <button id="btn-menu-pause" class="btn-secondary">MAIN MENU</button>
+        </div>
+      </div>
+
+      <!-- Game Over Screen -->
+      <div id="gameover-screen" class="screen-overlay">
+        <div class="modal-card">
+          <h2 class="gameover-title">GAME OVER</h2>
+          <div id="go-new-best" class="new-best-badge" style="display: none">
+            NEW HIGH SCORE!
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Score</span>
+              <span class="stat-val score-val" id="go-score">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Best Score</span>
+              <span class="stat-val" id="go-best">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Coins</span>
+              <span class="stat-val coin-val" id="go-coins">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Time</span>
+              <span class="stat-val" id="go-survival">0s</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Level</span>
+              <span class="stat-val" id="go-level" style="color: var(--amber)"
+                >L1</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Distance</span>
+              <span class="stat-val" id="go-dist">0m</span>
+            </div>
+            <div class="stat-item" style="grid-column: span 2">
+              <span class="stat-label">Best Distance Record</span>
+              <span class="stat-val" id="go-best-dist">0m</span>
+            </div>
+          </div>
+
+          <!-- Rewarded Continue Option -->
+          <button id="btn-continue-go" class="btn-rewarded-continue">
+            <span class="reward-icon">🎬</span>
+            <div style="text-align: left; line-height: 1.15">
+              <div
+                id="continue-ad-title"
+                style="font-weight: 800; font-size: 1rem"
+              >
+                WATCH AD TO CONTINUE
+              </div>
+              <div
+                id="continue-ad-subtitle"
+                style="
+                  font-size: 0.75rem;
+                  opacity: 0.85;
+                  font-family: &quot;Rajdhani&quot;, sans-serif;
+                "
+              >
+                One chance per run • Revives with shield
+              </div>
+            </div>
+          </button>
+          <div
+            id="go-ad-message"
+            class="go-ad-message"
+            style="display: none"
+          ></div>
+
+          <div class="btn-row" style="margin-bottom: 8px">
+            <button
+              id="btn-share-go"
+              class="btn-secondary"
+              style="border-color: var(--cyan); color: var(--cyan)"
+            >
+              <span>📤</span> SHARE SCORE
+            </button>
+            <button id="btn-challenge-go" class="btn-secondary">
+              <span>⚔️</span> CHALLENGE
+            </button>
+          </div>
+
+          <button id="btn-restart-go" class="btn-primary">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"
+              />
+            </svg>
+            RUN AGAIN (R)
+          </button>
+
+          <button id="btn-menu-go" class="btn-secondary">MAIN MENU</button>
+        </div>
+      </div>
+
+      <!-- Level Complete Celebration Modal -->
+      <div id="level-complete-modal" class="screen-overlay">
+        <div class="modal-card level-celebration-card">
+          <canvas
+            id="level-confetti-canvas"
+            class="level-confetti-canvas"
+          ></canvas>
+
+          <div class="level-celebration-badge-wrap">
+            <div class="celebration-badge">★ VICTORY ★</div>
+          </div>
+
+          <h2 class="level-celebration-title">LEVEL COMPLETE!</h2>
+          <div id="celebration-level-name" class="celebration-level-subtitle">
+            LEVEL 1 CLEARED
+          </div>
+
+          <div class="celebration-stars-row">
+            <span class="star-icon star-active">★</span>
+            <span class="star-icon star-active">★</span>
+            <span class="star-icon star-active">★</span>
+          </div>
+
+          <div class="celebration-reward-box">
+            <div class="celebration-coin-glow">
+              <span class="spinning-coin-icon">🪙</span>
+            </div>
+            <div class="celebration-reward-details">
+              <div class="celebration-reward-tag">STAGE COMPLETION BONUS</div>
+              <div
+                id="celebration-bonus-coins"
+                class="celebration-coins-display"
+              >
+                +50 COINS
+              </div>
+              <div class="celebration-reward-sub">
+                Added directly to your balance!
+              </div>
+            </div>
+          </div>
+
+          <div class="celebration-next-stage">
+            <div class="next-stage-header">NEXT DESTINATION</div>
+            <div id="celebration-next-name" class="next-stage-title">
+              LEVEL 2: SUNSET RUNWAY
+            </div>
+            <div id="celebration-next-desc" class="next-stage-desc">
+              Amber Glow • Faster Pace • Glowing Chevrons
+            </div>
+          </div>
+
+          <button
+            id="btn-continue-level"
+            class="btn-primary level-continue-btn"
+            type="button"
+          >
+            CONTINUE RUN ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- Ball Color / Shape / Background Customization Modal -->
+      <div id="customization-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <h2 class="section-title"><span>🎨</span> CUSTOMIZE RUNNER</h2>
+          <div
+            style="
+              font-size: 0.95rem;
+              color: var(--text-dim);
+              margin-bottom: 14px;
+              text-align: center;
+            "
+          >
+            Select your energetic identity, core shape & background theme
+          </div>
+
+          <div class="customization-tabs">
+            <button
+              id="tab-custom-orbs"
+              class="custom-tab-btn active"
+              type="button"
+            >
+              ORBS
+            </button>
+            <button id="tab-custom-shapes" class="custom-tab-btn" type="button">
+              SHAPES
+            </button>
+            <button
+              id="tab-custom-backgrounds"
+              class="custom-tab-btn"
+              type="button"
+            >
+              BACKGROUNDS
+            </button>
+          </div>
+
+          <div id="orb-list-container" class="orb-styles-grid"></div>
+
+          <button
+            id="btn-close-customization"
+            class="btn-secondary"
+            style="margin-top: 16px"
+          >
+            DONE
+          </button>
+        </div>
+      </div>
+
+      <!-- Session Reward Modal (Play & Earn) -->
+      <div id="session-reward-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <h2 class="section-title"><span>🎁</span> SESSION REWARDS</h2>
+          <div class="session-timer-banner">
+            <span>Active Session Time:</span>
+            <strong id="session-modal-timer">00:00</strong>
+          </div>
+          <div
+            style="
+              font-size: 0.9rem;
+              color: var(--text-dim);
+              margin-bottom: 16px;
+              text-align: center;
+            "
+          >
+            Enjoy your flow state and claim bonus rewards at each milestone!
+          </div>
+
+          <div
+            id="session-milestones-container"
+            class="session-milestones-list"
+          ></div>
+
+          <button
+            id="btn-close-session-reward"
+            class="btn-secondary"
+            style="margin-top: 16px"
+          >
+            CLOSE
+          </button>
+        </div>
+      </div>
+
+      <!-- Achievements Modal -->
+      <div id="achievements-modal" class="screen-overlay">
+        <div class="modal-card">
+          <h2 class="section-title">ACHIEVEMENTS</h2>
+          <div id="achievements-container" class="achievements-list"></div>
+          <button
+            id="btn-close-achievements"
+            class="btn-secondary"
+            style="margin-top: 16px"
+          >
+            CLOSE
+          </button>
+        </div>
+      </div>
+
+      <!-- Profile & Stats Modal -->
+      <div id="stats-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <h2 class="section-title">RUNNER PROFILE</h2>
+
+          <div class="profile-header">
+            <div class="profile-orb-slot" id="profile-orb-preview">
+              <div
+                class="orb-ring-orbit"
+                style="width: 50px; height: 50px"
+              ></div>
+              <div
+                class="orb-preview-core"
+                style="width: 28px; height: 28px"
+              ></div>
+            </div>
+            <div class="profile-meta">
+              <div class="profile-name-row">
+                <span id="stat-player-name" class="profile-player-name"
+                  >Player</span
+                >
+                <button
+                  id="btn-edit-name"
+                  class="btn-icon-small"
+                  title="Edit Name"
+                >
+                  ✎
+                </button>
+              </div>
+              <div
+                id="stat-player-level"
+                class="profile-sub"
+                style="
+                  color: var(--cyan);
+                  font-weight: 700;
+                  letter-spacing: 1px;
+                "
+              >
+                LEVEL 1 RUNNER
+              </div>
+              <div id="stat-unlocked-orbs" class="profile-sub">Orbs: 1/7</div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Best Score</span>
+              <span class="stat-val score-val" id="stat-best-score">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Coins Balance</span>
+              <span class="stat-val coin-val" id="stat-total-coins">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Best Distance</span>
+              <span
+                class="stat-val"
+                id="stat-best-distance"
+                style="color: var(--cyan)"
+                >0m</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Current Run</span>
+              <span
+                class="stat-val"
+                id="stat-current-distance"
+                style="color: var(--emerald)"
+                >0m</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Games Played</span>
+              <span class="stat-val" id="stat-total-runs">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Longest Survival</span>
+              <span class="stat-val" id="stat-longest-survival">0s</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Highest Level</span>
+              <span
+                class="stat-val"
+                id="stat-highest-level"
+                style="color: var(--amber)"
+                >Level 1</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Training Status</span>
+              <span
+                class="stat-val"
+                id="stat-tutorial-status"
+                style="color: var(--emerald); font-size: 0.85rem"
+                >COMPLETED ✓</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Achievements</span>
+              <span
+                class="stat-val"
+                id="stat-achievements-unlocked"
+                style="color: var(--emerald)"
+                >0/8</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Unlocked Orbs</span>
+              <span
+                class="stat-val"
+                id="stat-balls-unlocked"
+                style="color: var(--cyan)"
+                >1/7</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Unlocked Themes</span>
+              <span
+                class="stat-val"
+                id="stat-themes-unlocked"
+                style="color: var(--magenta)"
+                >1/6</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Unlocked Shapes</span>
+              <span
+                class="stat-val"
+                id="stat-shapes-unlocked"
+                style="color: var(--amber)"
+                >1/4</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Obstacles Cleared</span>
+              <span class="stat-val" id="stat-obstacles-avoided">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Best Combo</span>
+              <span
+                class="stat-val"
+                id="stat-highest-combo"
+                style="color: var(--amber)"
+                >x1</span
+              >
+            </div>
+          </div>
+
+          <!-- Facebook Social Section inside Profile -->
+          <div class="settings-group-header" style="margin-top: 14px">
+            FACEBOOK SOCIAL ACCOUNT
+          </div>
+          <div class="settings-group" style="margin-bottom: 12px">
+            <div class="setting-row" style="align-items: center">
+              <div
+                class="setting-info"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  min-width: 0;
+                  flex: 1;
+                "
+              >
+                <svg
+                  class="facebook-icon"
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="12" fill="#1877F2" />
+                  <path
+                    d="M15.12 12.72l.46-3.02h-2.9V7.74c0-.83.41-1.63 1.7-1.63h1.32V3.53s-1.2-.2-2.34-.2c-2.39 0-3.95 1.45-3.95 4.07v2.3H6.7v3.02h2.69v7.24a12.06 12.06 0 003.7 0v-7.24h2.03z"
+                    fill="#ffffff"
+                  />
+                </svg>
+                <div
+                  style="min-width: 0; display: flex; flex-direction: column"
+                >
+                  <span class="setting-name" style="line-height: 1.2"
+                    >Facebook</span
+                  >
+                  <span
+                    class="setting-desc"
+                    id="fb-profile-status-label"
+                    style="line-height: 1.2; word-break: break-word"
+                    >Not Connected</span
+                  >
+                </div>
+              </div>
+              <button
+                id="btn-toggle-facebook-profile"
+                class="btn-secondary"
+                style="
+                  width: auto;
+                  padding: 6px 14px;
+                  font-size: 0.85rem;
+                  margin-bottom: 0;
+                  flex-shrink: 0;
+                  min-width: 90px;
+                "
+              >
+                Connect
+              </button>
+            </div>
+          </div>
+
+          <div class="btn-row" style="margin-top: 10px; margin-bottom: 4px">
+            <button
+              id="btn-profile-new-user"
+              class="btn-primary"
+              style="
+                background: linear-gradient(135deg, #00f0ff, #0077ff);
+                color: #fff;
+                font-weight: 700;
+                box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35);
+              "
+            >
+              <span>👤</span> REGISTER AS NEW USER
+            </button>
+          </div>
+
+          <div class="btn-row" style="margin-top: 6px">
+            <button
+              id="btn-share-profile"
+              class="btn-secondary"
+              style="border-color: var(--cyan); color: var(--cyan)"
+            >
+              <span>📤</span> SHARE
+            </button>
+            <button id="btn-close-stats" class="btn-secondary">BACK</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <h2 class="section-title">SETTINGS</h2>
+
+          <!-- Audio & Vibration Category -->
+          <div class="settings-group-header">AUDIO & HAPTICS</div>
+          <div class="settings-compact-grid">
+            <div class="setting-compact-item">
+              <span class="setting-compact-label">SOUND</span>
+              <label class="switch switch-compact">
+                <input type="checkbox" id="setting-sound" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="setting-compact-item">
+              <span class="setting-compact-label">MUSIC</span>
+              <label class="switch switch-compact">
+                <input type="checkbox" id="setting-music" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="setting-compact-item">
+              <span class="setting-compact-label">HAPTICS</span>
+              <label class="switch switch-compact">
+                <input type="checkbox" id="setting-haptics" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Dedicated Haptic Feedback Setting Row -->
+          <div class="setting-row" style="margin-top: 10px; margin-bottom: 4px">
+            <div class="setting-info">
+              <span class="setting-name">Haptic Feedback</span>
+              <span class="setting-desc"
+                >Tactile response on jumps, coins &amp; game events</span
+              >
+            </div>
+            <div class="haptic-toggle-group">
+              <button
+                id="btn-haptic-on"
+                class="haptic-toggle-btn active"
+                type="button"
+              >
+                ON
+              </button>
+              <button
+                id="btn-haptic-off"
+                class="haptic-toggle-btn"
+                type="button"
+              >
+                OFF
+              </button>
+            </div>
+          </div>
+
+          <!-- Gameplay Category -->
+          <div class="settings-group-header">GAMEPLAY</div>
+          <div class="settings-group">
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-name">Difficulty</span>
+              </div>
+              <div class="speed-toggle-group">
+                <button id="btn-speed-low" class="speed-btn" type="button">
+                  EASY
+                </button>
+                <button
+                  id="btn-speed-normal"
+                  class="speed-btn active"
+                  type="button"
+                >
+                  NORMAL
+                </button>
+                <button id="btn-speed-high" class="speed-btn" type="button">
+                  FAST
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-name">Reduced Motion</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="setting-reduced-motion" />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Appearance Category -->
+          <div class="settings-group-header">APPEARANCE</div>
+          <div class="settings-group">
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-name">Theme</span>
+              </div>
+              <div class="theme-toggle-group">
+                <button id="btn-theme-dark" class="theme-btn active">
+                  🌙 DARK
+                </button>
+                <button id="btn-theme-light" class="theme-btn">☀️ LIGHT</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Social Category -->
+          <div class="settings-group-header">SOCIAL</div>
+          <div class="settings-group">
+            <div class="setting-row" style="align-items: center">
+              <div
+                class="setting-info"
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  min-width: 0;
+                  flex: 1;
+                "
+              >
+                <svg
+                  class="facebook-icon"
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="flex-shrink: 0"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="12" fill="#1877F2" />
+                  <path
+                    d="M15.12 12.72l.46-3.02h-2.9V7.74c0-.83.41-1.63 1.7-1.63h1.32V3.53s-1.2-.2-2.34-.2c-2.39 0-3.95 1.45-3.95 4.07v2.3H6.7v3.02h2.69v7.24a12.06 12.06 0 003.7 0v-7.24h2.03z"
+                    fill="#ffffff"
+                  />
+                </svg>
+                <div
+                  style="min-width: 0; display: flex; flex-direction: column"
+                >
+                  <span class="setting-name" style="line-height: 1.2"
+                    >Facebook</span
+                  >
+                  <span
+                    class="setting-desc"
+                    id="fb-status-label"
+                    style="line-height: 1.2; word-break: break-word"
+                    >Not Connected</span
+                  >
+                </div>
+              </div>
+              <button
+                id="btn-toggle-facebook"
+                class="btn-secondary"
+                style="
+                  width: auto;
+                  padding: 6px 14px;
+                  font-size: 0.85rem;
+                  margin-bottom: 0;
+                  flex-shrink: 0;
+                  min-width: 90px;
+                "
+              >
+                Connect
+              </button>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-name">Challenge Friends</span>
+              </div>
+              <button
+                id="btn-challenge-friends-settings"
+                class="btn-secondary"
+                style="
+                  width: auto;
+                  padding: 6px 14px;
+                  font-size: 0.85rem;
+                  margin-bottom: 0;
+                "
+              >
+                SHARE
+              </button>
+            </div>
+          </div>
+
+          <!-- Training Category -->
+          <div class="settings-group-header">TRAINING &amp; DEMO MODE</div>
+          <button
+            id="btn-replay-tutorial"
+            class="btn-secondary"
+            style="margin-bottom: 8px"
+          >
+            <span>🎮</span> RUN TEST / DEMO MODE
+          </button>
+
+          <!-- More Options -->
+          <div class="settings-group-header">MORE OPTIONS</div>
+          <div class="settings-action-grid">
+            <button id="btn-settings-profile" class="btn-secondary">
+              <span>📊</span> PROFILE
+            </button>
+            <button id="btn-settings-orb" class="btn-secondary">
+              <span>🎨</span> ORBS
+            </button>
+          </div>
+
+          <div class="settings-action-grid">
+            <button id="btn-settings-guide" class="btn-secondary">
+              <span>📖</span> GUIDE
+            </button>
+            <button
+              id="btn-settings-remove-ads"
+              class="btn-secondary"
+              style="border-color: var(--amber); color: var(--amber)"
+            >
+              <span>👑</span> REMOVE ADS
+            </button>
+          </div>
+
+          <button
+            id="btn-settings-restore"
+            class="btn-secondary"
+            style="margin-bottom: 4px"
+          >
+            <span>🔄</span> RESTORE
+          </button>
+
+          <button
+            id="btn-settings-new-user"
+            class="btn-secondary"
+            style="
+              border-color: var(--cyan);
+              color: var(--cyan);
+              margin-top: 6px;
+              margin-bottom: 4px;
+            "
+          >
+            <span>👤</span> REGISTER AS NEW USER
+          </button>
+
+          <button
+            id="btn-settings-reset"
+            class="btn-secondary"
+            style="
+              border-color: var(--amber);
+              color: var(--amber);
+              margin-top: 4px;
+            "
+          >
+            <span>🔄</span> RESTART CURRENT RUN
+          </button>
+
+          <button
+            id="btn-close-settings"
+            class="btn-secondary"
+            style="margin-top: 10px"
+          >
+            DONE
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily Missions Modal -->
+      <div id="daily-missions-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <div
+            class="section-badge"
+            style="
+              background: rgba(0, 240, 255, 0.15);
+              color: var(--cyan);
+              border-color: var(--cyan);
+            "
+          >
+            DAILY OBJECTIVES
+          </div>
+          <h2 class="section-title" style="margin-top: 6px">DAILY MISSIONS</h2>
+          <div
+            style="
+              font-size: 0.85rem;
+              color: var(--text-dim);
+              margin-bottom: 14px;
+              text-align: center;
+            "
+          >
+            Resets daily • Complete challenges for bonus energy coins!
+          </div>
+
+          <div id="daily-missions-container" class="daily-missions-list">
+            <!-- Dynamically populated missions -->
+          </div>
+
+          <button
+            id="btn-close-daily-missions"
+            class="btn-secondary"
+            style="margin-top: 14px"
+          >
+            CLOSE
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily Login Reward Modal -->
+      <div id="daily-reward-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <div
+            class="section-badge"
+            style="
+              background: rgba(255, 170, 0, 0.2);
+              color: var(--amber);
+              border-color: var(--amber);
+            "
+          >
+            STREAK BONUS
+          </div>
+          <h2
+            class="section-title"
+            style="color: var(--amber); margin-top: 6px"
+          >
+            DAILY REWARD
+          </h2>
+          <div
+            style="
+              font-size: 0.85rem;
+              color: var(--text-dim);
+              margin-bottom: 14px;
+              text-align: center;
+            "
+          >
+            Log in every day to collect escalating coin rewards!
+          </div>
+
+          <div id="daily-rewards-grid" class="daily-rewards-grid">
+            <!-- Dynamically generated Day 1 to Day 7 cards -->
+          </div>
+
+          <div
+            id="daily-reward-claim-container"
+            style="width: 100%; margin-top: 14px"
+          >
+            <button
+              id="btn-claim-daily-reward"
+              class="btn-primary"
+              style="
+                background: linear-gradient(90deg, #ffaa00, #ffdd00);
+                color: #000;
+              "
+            >
+              CLAIM TODAY'S REWARD
+            </button>
+          </div>
+
+          <button
+            id="btn-close-daily-reward"
+            class="btn-secondary"
+            style="margin-top: 8px"
+          >
+            CLOSE
+          </button>
+        </div>
+      </div>
+
+      <!-- Leaderboard Modal -->
+      <div id="leaderboard-modal" class="screen-overlay">
+        <div class="modal-card modal-large">
+          <div
+            class="section-badge"
+            style="
+              background: rgba(0, 255, 136, 0.15);
+              color: var(--emerald);
+              border-color: var(--emerald);
+            "
+          >
+            HALL OF FAME
+          </div>
+          <h2 class="section-title" style="margin-top: 6px">LEADERBOARD</h2>
+          <div
+            style="
+              font-size: 0.85rem;
+              color: var(--text-dim);
+              margin-bottom: 14px;
+              text-align: center;
+            "
+          >
+            Local tier rankings • Compare your best score!
+          </div>
+
+          <div id="leaderboard-container" class="leaderboard-list">
+            <!-- Dynamically populated rankings including YOU -->
+          </div>
+
+          <div class="leaderboard-note">
+            <span>🌐</span> Offline Hall of Fame. Backend sync ready for Google
+            Play Games / Cloud SQL.
+          </div>
+
+          <div class="btn-row" style="margin-top: 10px">
+            <button
+              id="btn-challenge-friends-lb"
+              class="btn-secondary"
+              style="border-color: var(--cyan); color: var(--cyan)"
+            >
+              <span>⚔️</span> CHALLENGE
+            </button>
+            <button id="btn-close-leaderboard" class="btn-secondary">
+              CLOSE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Remove Ads / Premium Modal (Google Play Billing Architecture) -->
+      <div id="purchase-modal" class="screen-overlay">
+        <div class="modal-card" style="border-color: var(--amber)">
+          <div
+            class="section-badge"
+            style="
+              background: rgba(255, 170, 0, 0.2);
+              color: var(--amber);
+              border-color: var(--amber);
+            "
+          >
+            CRAZY BALL RUSH PREMIUM
+          </div>
+          <h2
+            class="section-title"
+            style="color: var(--amber); margin-top: 10px"
+          >
+            REMOVE ADS
+          </h2>
+          <p
+            style="
+              color: var(--text-dim);
+              text-align: center;
+              font-size: 1rem;
+              margin-bottom: 18px;
+              line-height: 1.4;
+            "
+          >
+            Enjoy uninterrupted runs with zero advertisements and instant free
+            continuations forever!
+          </p>
+
+          <div class="price-pill">$1.99 ONE-TIME</div>
+
+          <div
+            id="purchase-notice-text"
+            style="
+              font-size: 0.78rem;
+              color: var(--text-dim);
+              text-align: center;
+              margin-bottom: 16px;
+              line-height: 1.35;
+            "
+          >
+            Architecture integrated with Google Play Billing (product:
+            <code style="color: var(--cyan)">remove_ads</code>). Real purchases
+            process via Google Play Store on Android devices.
+          </div>
+
+          <button
+            id="btn-purchase-confirm"
+            class="btn-primary"
+            style="
+              background: linear-gradient(90deg, #ffaa00, #ffdd00);
+              color: #000;
+            "
+          >
+            CONTINUE WITH PLAY STORE
+          </button>
+          <button id="btn-purchase-cancel" class="btn-secondary">CLOSE</button>
+        </div>
+      </div>
+
+      <!-- Restart Current Run Confirmation Modal -->
+      <div id="reset-confirm-modal" class="screen-overlay">
+        <div class="modal-card" style="border-color: var(--amber)">
+          <h2 class="section-title" style="color: var(--amber)">
+            RESTART RUN?
+          </h2>
+          <p
+            style="
+              color: var(--text-dim);
+              text-align: center;
+              font-size: 0.95rem;
+              margin-bottom: 10px;
+              line-height: 1.4;
+            "
+          >
+            Reset your current run distance and score to start fresh from Level
+            1?
+          </p>
+          <p
+            style="
+              color: var(--emerald);
+              text-align: center;
+              font-size: 0.85rem;
+              margin-bottom: 20px;
+              line-height: 1.3;
+            "
+          >
+            ✓ Your player name, achievements, coin balance, and unlocked orbs
+            will be kept safe!
+          </p>
+
+          <button
+            id="btn-confirm-reset"
+            class="btn-primary"
+            style="
+              background: linear-gradient(135deg, #ffaa00, #ff5500);
+              color: #fff;
+              box-shadow: 0 0 20px rgba(255, 170, 0, 0.4);
+            "
+          >
+            RESTART CURRENT RUN
+          </button>
+          <button
+            id="btn-cancel-reset"
+            class="btn-secondary"
+            style="margin-top: 8px"
+          >
+            CANCEL
+          </button>
+        </div>
+      </div>
+
+      <!-- Register As New User Modal -->
+      <div id="new-user-modal" class="screen-overlay">
+        <div class="modal-card" style="border-color: var(--cyan)">
+          <div
+            class="welcome-logo-container"
+            style="display: flex; justify-content: center; margin-bottom: 12px"
+          >
+            <img
+              src="app_logo.jpg"
+              alt="Crazy Ball Rush Logo"
+              class="welcome-logo-img"
+              style="
+                width: 68px;
+                height: 68px;
+                border-radius: 18px;
+                border: 2px solid rgba(0, 240, 255, 0.45);
+                box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+                object-fit: cover;
+              "
+            />
+          </div>
+          <h2
+            class="section-title"
+            style="color: var(--cyan); margin-bottom: 4px"
+          >
+            REGISTER AS NEW USER
+          </h2>
+          <p
+            style="
+              color: var(--text-dim);
+              text-align: center;
+              font-size: 0.9rem;
+              margin-bottom: 16px;
+              line-height: 1.4;
+            "
+          >
+            Create a fresh runner profile to begin a new journey. (Your previous
+            profile will be safely archived!)
+          </p>
+
+          <div class="input-group">
+            <input
+              type="text"
+              id="input-new-user-name"
+              class="game-input"
+              maxlength="14"
+              placeholder="Enter new runner name"
+              autocomplete="nickname"
+              autocapitalize="words"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="done"
+            />
+            <div
+              id="new-user-error-msg"
+              class="input-error-msg"
+              style="display: none"
+            >
+              Please enter a name
+            </div>
+          </div>
+
+          <button
+            id="btn-submit-new-user"
+            class="btn-primary"
+            style="
+              margin-top: 10px;
+              background: linear-gradient(135deg, #00f0ff, #0077ff);
+              color: #fff;
+              font-weight: 700;
+              box-shadow: 0 4px 15px rgba(0, 240, 255, 0.35);
+            "
+          >
+            CREATE PROFILE &amp; START
+          </button>
+          <button
+            id="btn-cancel-new-user"
+            class="btn-secondary"
+            style="margin-top: 8px"
+          >
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/audio.js"></script>
+    <script src="js/ad_manager.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>
