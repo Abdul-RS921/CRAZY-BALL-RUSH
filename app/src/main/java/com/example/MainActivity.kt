@@ -41,6 +41,7 @@ import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
   private var webView: WebView? = null
+  private var handlingBackPress = false
   private lateinit var callbackManager: CallbackManager
   private lateinit var adMobManager: AdMobManager
   private lateinit var billingManager: BillingManager
@@ -98,28 +99,39 @@ class MainActivity : ComponentActivity() {
 
     onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
       override fun handleOnBackPressed() {
+        if (handlingBackPress) return
         val wv = webView
+        android.util.Log.d("CrazyBallRushBack", "Back pressed; webViewAvailable=${wv != null}")
         if (wv != null) {
+          val canGoBack = wv.canGoBack()
+          android.util.Log.d("CrazyBallRushBack", "WebView canGoBack=$canGoBack")
+          if (canGoBack) {
+            wv.goBack()
+            return
+          }
+          handlingBackPress = true
           wv.evaluateJavascript(
-            "(function() { " +
-              "var g = window.crazyBallRushGame || window.escapeRunGame; " +
-              "if (g && typeof g.handleAndroidBack === 'function') { " +
-                "return g.handleAndroidBack() ? 'true' : 'false'; " +
-              "} " +
-              "return 'false'; " +
-            "})()"
+              "(function() { " +
+                "var g = window.crazyBallRushGame || window.escapeRunGame; " +
+                "if (g && typeof g.handleAndroidBack === 'function') { " +
+                  "return g.handleAndroidBack() ? 'handled' : 'unhandled'; " +
+                "} " +
+                "return 'unavailable'; " +
+              "})()"
           ) { result ->
-            val consumed = result?.replace("\"", "")?.trim() == "true"
-            if (!consumed) {
-              isEnabled = false
-              onBackPressedDispatcher.onBackPressed()
-              isEnabled = true
-            }
+              android.util.Log.d("CrazyBallRushBack", "JavaScript Back result=$result")
+              when (result?.replace("\"", "")?.trim()) {
+                "unhandled" -> finish()
+                "handled" -> Unit
+                else -> android.util.Log.w(
+                  "CrazyBallRush",
+                  "Back handling was unavailable; keeping the app open."
+                )
+              }
+              handlingBackPress = false
           }
         } else {
-          isEnabled = false
-          onBackPressedDispatcher.onBackPressed()
-          isEnabled = true
+          android.util.Log.w("CrazyBallRushBack", "No WebView available; keeping the app open.")
         }
       }
     })
@@ -137,6 +149,8 @@ class MainActivity : ComponentActivity() {
               wv.addJavascriptInterface(AdsBridge(this@MainActivity, adMobManager, billingManager), "AndroidAdsBridge")
               wv.addJavascriptInterface(BillingBridge(this@MainActivity, billingManager), "AndroidBillingBridge")
               wv.addJavascriptInterface(HapticBridge(this@MainActivity), "AndroidHapticBridge")
+              wv.addJavascriptInterface(ShareBridge(this@MainActivity), "AndroidShareBridge")
+              wv.addJavascriptInterface(ExitBridge(this@MainActivity), "AndroidAppBridge")
             },
             onWebViewCreated = { wv ->
               webView = wv

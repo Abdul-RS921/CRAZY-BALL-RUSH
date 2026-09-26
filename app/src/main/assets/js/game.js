@@ -1488,7 +1488,7 @@
       if (onBtn) onBtn.classList.toggle('active', this.hapticsEnabled);
       if (offBtn) offBtn.classList.toggle('active', !this.hapticsEnabled);
       if (checkbox) checkbox.checked = this.hapticsEnabled;
-      if (this.hapticsEnabled) {
+      if (this.hapticsEnabled && shouldSave) {
         this.triggerHaptic('button');
       }
     }
@@ -3495,6 +3495,7 @@
     }
 
     gameOver() {
+      if (this.state === STATE.GAME_OVER) return;
       this.state = STATE.GAME_OVER;
       if (this.notificationManager) this.notificationManager.clearAll();
       this.floatingTexts = [];
@@ -3502,7 +3503,7 @@
         this.sound.stopMusic();
         this.sound.playDeath();
       }
-      this.triggerHaptic(70);
+      this.triggerHaptic('game_over');
       this.addScreenShake(14, 0.45);
 
       const orb = this.getSelectedOrb();
@@ -4486,6 +4487,7 @@
       }
       const modalIds = [
         'settings-modal',
+        'exit-game-confirm-modal',
         'level-complete-modal',
         'customization-modal',
         'session-reward-modal',
@@ -4509,6 +4511,7 @@
       const modalIds = [
         'level-complete-modal',
         'reset-confirm-modal',
+        'exit-game-confirm-modal',
         'purchase-modal',
         'stats-modal',
         'settings-modal',
@@ -4623,6 +4626,10 @@
       // 1. Any active modal gets closed / pops navigation history
       const activeModal = this.getActiveModalId();
       if (activeModal) {
+        if (activeModal === 'exit-game-confirm-modal') {
+          this.cancelExitGame();
+          return true;
+        }
         if (activeModal === 'level-complete-modal') {
           this.resumeFromLevelComplete();
           return true;
@@ -4665,7 +4672,13 @@
         return true;
       }
 
-      // 7. At Menu/Dashboard or Welcome: system handles exit/minimize
+      // 7. Confirm before leaving from the menu or welcome screen
+      if (this.state === STATE.MENU || this.state === STATE.WELCOME) {
+        this.openAppExitConfirmation();
+        return true;
+      }
+
+      // 8. At other screens: system handles exit/minimize
       return false;
     }
 
@@ -6285,6 +6298,10 @@
         }
       };
 
+      window.onNativeShareUnavailable = (message) => {
+        this.showToast('SHARING UNAVAILABLE', message || 'Sharing is unavailable on this device.', '📤');
+      };
+
       // Query native Facebook SDK session status
       const bridge = this.getFacebookBridge();
       if (bridge && typeof bridge.getLoginStatus === 'function') {
@@ -6318,76 +6335,90 @@
     shareScore(scoreToShare = null) {
       const score = scoreToShare !== null ? scoreToShare : (this.score || this.stats.bestScore || 0);
       const text = `I just scored ${Math.floor(score).toLocaleString()} in Crazy Ball Rush! Can you beat my score?`;
-      const url = window.location.href;
-
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        navigator.share({
-          title: 'Crazy Ball Rush - Score Challenge',
-          text: text,
-          url: url
-        }).catch(err => {
-          if (err.name !== 'AbortError') {
-            this.fallbackShare(text, url);
-          }
-        });
-      } else {
-        this.fallbackShare(text, url);
-      }
+      this.shareContent('Crazy Ball Rush - Score Challenge', text);
     }
 
     shareAchievement(key) {
       const def = ACHIEVEMENTS_DEF[key];
       if (!def) return;
-      const text = `I unlocked the '${def.name}' achievement in Crazy Ball Rush! ${def.desc}`;
-      const url = window.location.href;
-
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        navigator.share({
-          title: 'Crazy Ball Rush - Achievement Unlocked',
-          text: text,
-          url: url
-        }).catch(err => {
-          if (err.name !== 'AbortError') {
-            this.fallbackShare(text, url);
-          }
-        });
-      } else {
-        this.fallbackShare(text, url);
-      }
+      const text = `I unlocked the "${def.name}" achievement in Crazy Ball Rush! ${def.desc} Play Crazy Ball Rush and see what you can unlock.`;
+      this.shareContent('Crazy Ball Rush - Achievement Unlocked', text);
     }
 
     challengeFriends() {
       const best = this.stats.bestScore || 0;
       const text = `Can you beat my Crazy Ball Rush high score of ${best.toLocaleString()}? Leaping hazards in the cyber flow!`;
-      const url = window.location.href;
+      this.shareContent('Crazy Ball Rush - Challenge', text);
+    }
 
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        navigator.share({
-          title: 'Crazy Ball Rush - Challenge',
-          text: text,
-          url: url
-        }).catch(err => {
-          if (err.name !== 'AbortError') {
-            this.fallbackShare(text, url);
-          }
-        });
+    fallbackShare(text, url, title = 'Crazy Ball Rush') {
+      const bridge = window.AndroidShareBridge;
+      if (bridge && typeof bridge.share === 'function') {
+        bridge.share(title, text, url);
+        return;
+      }
+
+      const shareText = [text, url].filter(Boolean).join(' ');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareText)
+          .then(() => this.showToast('COPIED TO CLIPBOARD!', 'Share it with your friends!', '📋'))
+          .catch(() => this.showToast('SHARING UNAVAILABLE', 'Sharing is unavailable on this device.', '📤'));
       } else {
-        this.fallbackShare(text, url);
+        this.showToast('SHARING UNAVAILABLE', 'Sharing is unavailable on this device.', '📤');
       }
     }
 
-    fallbackShare(text, url) {
-      const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`;
-      try {
-        window.open(fbUrl, '_blank', 'noopener,noreferrer');
-      } catch (e) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(`${text} ${url}`);
-          this.showToast('COPIED TO CLIPBOARD!', 'Share it with your friends!', '📋');
-        } else {
-          this.showToast('SHARE CHALLENGE', text, '📤');
-        }
+    shareContent(title, text) {
+      const url = window.location.protocol === 'file:' ? '' : window.location.href;
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        navigator.share({ title, text, url }).catch(err => {
+          if (err.name !== 'AbortError') this.fallbackShare(text, url, title);
+        });
+      } else {
+        this.fallbackShare(text, url, title);
       }
+    }
+
+    openExitGameConfirmation() {
+      const modal = document.getElementById('exit-game-confirm-modal');
+      if (!modal || modal.classList.contains('active')) return;
+      this.exitConfirmationAction = 'menu';
+      this.openModalById('exit-game-confirm-modal', true);
+    }
+
+    openAppExitConfirmation() {
+      const modal = document.getElementById('exit-game-confirm-modal');
+      if (!modal || modal.classList.contains('active')) return;
+      this.exitConfirmationAction = 'app';
+      this.openModalById('exit-game-confirm-modal', true);
+    }
+
+    cancelExitGame() {
+      if (this.getActiveModalId() === 'exit-game-confirm-modal') {
+        this.exitConfirmationAction = null;
+        const modal = document.getElementById('exit-game-confirm-modal');
+        if (modal) modal.classList.remove('active');
+        this.navHistory = (this.navHistory || []).filter(id => id !== 'exit-game-confirm-modal');
+        if (this.state === STATE.PAUSED) this.resumeGame();
+      }
+    }
+
+    confirmExitGame() {
+      if (this.getActiveModalId() !== 'exit-game-confirm-modal') return;
+      const exitApp = this.exitConfirmationAction === 'app';
+      this.exitConfirmationAction = null;
+      this.closeAllModals(true);
+      if (exitApp) {
+        const bridge = window.AndroidAppBridge;
+        if (bridge && typeof bridge.exitApp === 'function') {
+          bridge.exitApp();
+          return;
+        }
+        this.showToast('EXIT UNAVAILABLE', 'Unable to close the app from this screen.', '⚠️');
+        return;
+      }
+      this.state = STATE.MENU;
+      this.updateUI();
     }
 
     // =========================================================
@@ -6689,7 +6720,7 @@
         }
       });
 
-      const bindBtn = (id, fn) => {
+      const bindBtn = (id, fn, { capture = false, stopImmediatePropagation = false } = {}) => {
         const btn = typeof id === 'string' ? document.getElementById(id) : id;
         if (!btn) return;
 
@@ -6737,6 +6768,10 @@
           lastTrigger = now;
 
           if (e) e.stopPropagation();
+          if (stopImmediatePropagation && e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
 
           if (this.sound) {
             if (typeof this.sound.initContext === 'function') this.sound.initContext();
@@ -6744,7 +6779,7 @@
           }
 
           fn();
-        });
+        }, { capture });
       };
 
       // Registration screen keyboard adaptation
@@ -6873,9 +6908,17 @@
       bindBtn('btn-resume', () => this.resumeGame());
       bindBtn('btn-restart-pause', () => this.restart());
       bindBtn('btn-settings-pause', () => this.openSettingsModal());
-      bindBtn('btn-menu-pause', () => {
-        this.state = STATE.MENU;
-        this.updateUI();
+      bindBtn('btn-menu-pause', () => this.openExitGameConfirmation(), {
+        capture: true,
+        stopImmediatePropagation: true
+      });
+      bindBtn('btn-cancel-exit-game', () => this.cancelExitGame(), {
+        capture: true,
+        stopImmediatePropagation: true
+      });
+      bindBtn('btn-confirm-exit-game', () => this.confirmExitGame(), {
+        capture: true,
+        stopImmediatePropagation: true
       });
       bindBtn('btn-continue-go', () => this.watchAdToContinue());
       bindBtn('btn-restart-go', () => this.restart());

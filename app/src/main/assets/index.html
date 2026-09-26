@@ -600,7 +600,18 @@
           <button id="btn-settings-pause" class="btn-secondary">
             ⚙ SETTINGS
           </button>
-          <button id="btn-menu-pause" class="btn-secondary">MAIN MENU</button>
+          <button id="btn-menu-pause" class="btn-secondary">EXIT GAME</button>
+        </div>
+      </div>
+
+      <div id="exit-game-confirm-modal" class="screen-overlay">
+        <div class="modal-card exit-game-confirm-card" role="dialog" aria-modal="true" aria-labelledby="exit-game-confirm-title">
+          <h2 id="exit-game-confirm-title" class="section-title">EXIT GAME?</h2>
+          <p>Are you sure you want to exit the game?</p>
+          <div class="exit-game-confirm-actions">
+            <button id="btn-cancel-exit-game" class="btn-secondary" type="button">CANCEL</button>
+            <button id="btn-confirm-exit-game" class="btn-primary" type="button">EXIT</button>
+          </div>
         </div>
       </div>
 
